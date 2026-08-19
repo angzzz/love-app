@@ -366,7 +366,7 @@ Pages.home = {
   },
 
   // 导出数据（纯前端，无需联网/服务端）
-  // 剥离头像与照片——各自手机本地维护，避免文本过大微信发不出，也避免互相覆盖
+  // 仅剥离头像与配对状态，避免互相覆盖；照片保留（前端已压缩很小）
   exportData() {
     try {
       const d = Store.get()
@@ -374,7 +374,6 @@ Pages.home = {
       delete out.avatarA; delete out.avatarB
       delete out.avatarAUpdatedAt; delete out.avatarBUpdatedAt
       delete out.pairCode; delete out.pairId
-      if (out.moments) out.moments = out.moments.map(m => ({ ...m, photos: [] }))
       const txt = JSON.stringify(out)
       const fallback = () => {
         const box = document.getElementById('syncBox')

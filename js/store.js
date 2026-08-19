@@ -212,14 +212,23 @@ async function pushSync() {
 }
 
 /**
- * 剥离同步数据：去掉瞬间照片 base64（多张可能几百KB）
- * 头像（120×120 约 4-13KB）正常同步——对方要能看到
+ * 剥离同步数据：默认保留全部字段（含约会瞬间的照片）。
+ * 前端上传时已把照片压缩到 800px / jpeg 0.75，单张约 80–150KB，9 张也就 ~1MB，
+ * 远在 KV 单值 25MB 上限之内，可以放心同步，让对方直接看到照片。
+ * 仅当整体体积过大（瞬间攒得特别多）时降级：从最旧的瞬间开始逐条丢弃照片，
+ * 优先保住卡片/文字等核心数据能正常同步，不至于整包同步失败。
  */
 function stripForSync(data) {
   const stripped = JSON.parse(JSON.stringify(data))
-  // 瞬间照片 base64 太大，不同步（各自手机本地存）
-  if (stripped.moments) {
-    stripped.moments = stripped.moments.map(m => ({ ...m, photos: [] }))
+  const MAX = 6 * 1024 * 1024 // 6MB 安全阈值
+  const sizeOf = () => JSON.stringify(stripped).length
+  if (sizeOf() > MAX && stripped.moments && stripped.moments.length) {
+    // 从最旧到最新逐条清空照片，直到回到阈值内；仍超则全部清空
+    const ordered = [...stripped.moments].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+    for (const m of ordered) {
+      m.photos = []
+      if (sizeOf() <= MAX) break
+    }
   }
   return stripped
 }
