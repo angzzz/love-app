@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#E8807C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="小c的心愿口袋">
+  <link rel="manifest" href="./manifest.json">
+  <title>小c的心愿口袋</title>
+  <link rel="stylesheet" href="./css/app.css">
+  <style>
+    /* ===== 首页（简洁版） ===== */
+    .hero-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, #E8807C 0%, #F5A882 100%);
+      border-radius: 20px; padding: 20px 16px;
+      margin-bottom: 12px; box-shadow: var(--shadow-card);
+    }
+    .hero-avatar {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .hero-avatar-img, .hero-avatar-ph {
+      width: 58px; height: 58px; border-radius: 50%;
+      object-fit: cover; border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .hero-avatar-ph {
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.35); color: #fff;
+      font-size: 22px; font-weight: 700;
+    }
+    .hero-name { font-size: 12px; color: rgba(255,255,255,0.95); }
+    .hero-center {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 2px; cursor: pointer;
+    }
+    .hero-days { font-size: 40px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -1px; }
+    .hero-days-prefix { font-size: 15px; color: rgba(255,255,255,0.95); margin-bottom: 2px; }
+    .hero-days-row { display: flex; align-items: baseline; justify-content: center; gap: 3px; }
+    .hero-days-unit { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.95); }
+    .hero-set { font-size: 14px; color: rgba(255,255,255,0.95); }
+
+    /* 并排双小卡 */
+    .mini-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .mini-card {
+      flex: 1; background: var(--color-card); border-radius: 16px;
+      padding: 14px 10px; display: flex; flex-direction: column;
+      align-items: center; gap: 2px; box-shadow: var(--shadow-card);
+      cursor: pointer;
+    }
+    .mini-emoji { font-size: 22px; margin-bottom: 2px; }
+    .mini-num { font-size: 26px; font-weight: 800; color: var(--color-primary); line-height: 1.1; }
+    .mini-unit { font-size: 12px; font-weight: 500; color: var(--color-text-light); margin-left: 2px; }
+    .mini-label { font-size: 12px; color: var(--color-text-light); }
+
+    /* 快捷操作行 */
+    .quick-row {
+      display: flex; gap: 10px; margin-bottom: 18px;
+    }
+    .quick-item {
+      flex: 1; background: var(--color-card); border-radius: 14px;
+      padding: 12px 4px; display: flex; flex-direction: column;
+      align-items: center; gap: 4px; box-shadow: var(--shadow-soft);
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .quick-item:active { transform: scale(0.95); }
+    .quick-emoji { font-size: 22px; }
+    .quick-label { font-size: 12px; color: var(--color-text); }
+
+    /* ===== 随机美食页 ===== */
+    .food-stage {
+      background: var(--color-card); border-radius: 20px;
+      padding: 36px 16px; margin-bottom: 14px;
+      box-shadow: var(--shadow-card); text-align: center;
+    }
+    .food-result {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-size: 64px; line-height: 1;
+      min-height: 130px; justify-content: center;
+    }
+    .food-result-name { font-size: 24px; font-weight: 800; color: var(--color-text); }
+    .food-rolling { opacity: 0.75; }
+    .food-actions { display: flex; flex-direction: column; gap: 0; margin-bottom: 18px; }
+    .food-btn { width: 100%; }
+    .food-history {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      margin-bottom: 18px; padding: 0 4px;
+    }
+    .food-history-title { font-size: 12px; color: var(--color-text-light); margin-right: 4px; }
+    .food-history-item {
+      font-size: 12px; background: var(--color-card);
+      border-radius: 12px; padding: 4px 10px; color: var(--color-text);
+      box-shadow: var(--shadow-soft);
+    }
+    .food-manage {
+      background: var(--color-card); border-radius: 16px;
+      padding: 14px; box-shadow: var(--shadow-card);
+    }
+
+    .section { margin-bottom: 16px; }
+    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .section-title { font-size: 16px; font-weight: 700; }
+    .section-more { font-size: 12px; color: var(--color-text-light); cursor: pointer; }
+
+    .latest-moment-card {
+      display: flex; gap: 10px; background: var(--color-card);
+      border-radius: 12px; padding: 10px; box-shadow: var(--shadow-card); cursor: pointer;
+    }
+    .moment-cover { width: 90px; height: 90px; border-radius: 10px; flex-shrink: 0; object-fit: cover; }
+    .placeholder-cover { display: flex; align-items: center; justify-content: center; background: var(--color-bg); }
+    .moment-info { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; overflow: hidden; }
+    .moment-title-sm { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .moment-meta { display: flex; align-items: center; gap: 6px; }
+    .moment-date-sm { font-size: 12px; color: var(--color-text-light); }
+    .moment-mood-sm { font-size: 11px; background: var(--color-bg); padding: 2px 8px; border-radius: 8px; color: var(--color-primary); }
+    .moment-place-sm { font-size: 12px; color: var(--color-text-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .moment-photos-count { font-size: 11px; color: var(--color-text-light); }
+
+    .welcome-hint { text-align: center; padding: 30px 16px; }
+    .hint-emoji { font-size: 36px; display: block; margin-bottom: 8px; }
+    .hint-text { font-size: 14px; color: var(--color-text-light); line-height: 1.8; white-space: pre-line; }
+
+    /* 纪念日卡片 */
+    .anni-card {
+      background: var(--color-card); border-radius: 14px; padding: 16px;
+      margin-bottom: 10px; box-shadow: var(--shadow-card); cursor: pointer;
+    }
+    .anni-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .anni-card-emoji { font-size: 32px; }
+    .anni-card-badge { font-size: 13px; font-weight: 600; }
+    .anni-card-title { display: block; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .anni-card-date { display: block; font-size: 13px; color: var(--color-text-light); }
+    .anni-card-note { display: block; font-size: 13px; color: var(--color-text); margin-top: 6px; opacity: 0.8; }
+
+    /* sign-tab 复用 */
+    .sign-tab { display: inline-block; }
+
+    /* 配对状态 */
+    .pair-status { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--color-border); }
+    .pair-box { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--color-bg); border-radius: 12px; margin-top: 6px; }
+    .pair-box.pair-connected { background: linear-gradient(135deg, #E8F5E9 0%, #FFF5F5 100%); border: 1px solid #C8E6C9; }
+    .pair-icon { font-size: 24px; }
+    .pair-info { flex: 1; display: flex; flex-direction: column; }
+    .pair-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
+    .pair-code { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: var(--color-primary); margin-top: 2px; font-family: monospace; }
+    .pair-sub { font-size: 12px; color: var(--color-text-light); margin-top: 2px; }
+    .pair-sync-btn { font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+    .pair-sync-btn:active { background: rgba(0,0,0,0.05); }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- 底部导航 -->
+  <div class="tabbar">
+    <div class="tab active" data-tab="home"><span class="tab-icon">🏠</span><span>首页</span></div>
+    <div class="tab" data-tab="wishes"><span class="tab-icon">💌</span><span>心愿池</span></div>
+    <div class="tab" data-tab="food"><span class="tab-icon">🎲</span><span>吃啥</span></div>
+    <div class="tab" data-tab="countdown"><span class="tab-icon">⏳</span><span>倒计时</span></div>
+    <div class="tab" data-tab="moments"><span class="tab-icon">📷</span><span>瞬间</span></div>
+    <div class="tab" data-tab="anniversary"><span class="tab-icon">🎂</span><span>纪念日</span></div>
+  </div>
+
+  <!-- 弹层 -->
+  <div class="mask" id="mask" onclick="App.closeSheet()"></div>
+  <div class="sheet" id="sheet"></div>
+
+  <script src="./js/store.js"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/lunar.js"></script>
+  <script src="./js/date.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
