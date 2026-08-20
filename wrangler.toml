@@ -1,0 +1,7 @@
+name = "xiaoc-wish-pocket"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "LOVE_APP_KV"
+id = "2d0661cc31274b028f517fdb9b7f6f66"

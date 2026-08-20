@@ -249,6 +249,11 @@ Pages.home = {
   // 设置/修改在一起日期 + 昵称 + 配对
   showSetup() {
     const d = Store.get()
+    // 昵称按全局 A/B 存储，但本机是 B 端时，两个输入框的值需对调，
+    // 否则 B 端会把自己名字显示到"对方的昵称"下，造成混淆
+    const myPair = d.pairId || 'A'
+    const nameAval = myPair === 'B' ? (d.partnerNameB || '') : (d.partnerNameA || '')
+    const nameBval = myPair === 'B' ? (d.partnerNameA || '') : (d.partnerNameB || '')
     // 配对区
     let pairHtml = ''
     if (d.pairCode) {
@@ -294,9 +299,9 @@ Pages.home = {
       <span class="label">在一起的日子</span>
       <input class="input" type="date" id="setupDate" value="${d.togetherSince || ''}">
       <span class="label">你的昵称</span>
-      <input class="input" id="setupNameA" placeholder="比如：小明" value="${d.partnerNameA || ''}" maxlength="8">
+      <input class="input" id="setupNameA" placeholder="比如：小明" value="${nameAval}" maxlength="8">
       <span class="label">对方的昵称</span>
-      <input class="input" id="setupNameB" placeholder="比如：小红" value="${d.partnerNameB || ''}" maxlength="8">
+      <input class="input" id="setupNameB" placeholder="比如：小红" value="${nameBval}" maxlength="8">
       <button class="btn-primary" onclick="Pages.home.saveSetup()">保存</button>
       ${pairHtml}
       <div class="pair-status" style="margin-top:18px;border-top:1px dashed var(--color-border);padding-top:16px;">
@@ -407,10 +412,12 @@ Pages.home = {
     const txt = box.value.trim()
     const localA = Store.get().avatarA
     const localB = Store.get().avatarB
+    const localNameA = Store.get().partnerNameA
+    const localNameB = Store.get().partnerNameB
     const ok = Store.import(txt)
     if (!ok) { App.toast('内容格式不对，检查下对方发来的数据'); return }
-    // 保留本机头像；不带入对方的配对码/身份（这是"共享数据"不是"配对"）
-    Store.update(d => ({ ...d, avatarA: localA, avatarB: localB, pairCode: '', pairId: '' }))
+    // 保留本机头像与昵称；不带入对方的配对码/身份（这是"共享数据"不是"配对"）
+    Store.update(d => ({ ...d, avatarA: localA, avatarB: localB, partnerNameA: localNameA, partnerNameB: localNameB, pairCode: '', pairId: '' }))
     App.toast('导入成功 ❤️ 数据已共享')
     this.render()
     setTimeout(() => this.showSetup(), 100)
@@ -421,7 +428,11 @@ Pages.home = {
     const nameA = document.getElementById('setupNameA').value.trim()
     const nameB = document.getElementById('setupNameB').value.trim()
     const syncServer = (document.getElementById('setupSyncServer')?.value || '').trim()
-    Store.update(d => ({ ...d, togetherSince: date, partnerNameA: nameA, partnerNameB: nameB, syncServer }))
+    const myPair = (Store.get().pairId || 'A')
+    // 昵称按全局 A/B 存储：本机是 B 端时，两个输入框的值需对调回 A/B
+    const pA = myPair === 'B' ? nameB : nameA
+    const pB = myPair === 'B' ? nameA : nameB
+    Store.update(d => ({ ...d, togetherSince: date, partnerNameA: pA, partnerNameB: pB, syncServer }))
     App.closeSheet()
     App.toast('已保存 ❤️')
     this.render()
@@ -522,7 +533,9 @@ Pages.wishes = {
 
   openEditor() {
     const t = this._chosen
-    const recipient = Store.get().partnerNameB || '对方'
+    // 收件人取"对方"的名字：本机是 A 端→对方是 B（partnerNameB）；本机是 B 端→对方是 A（partnerNameA）
+    const myPair = Store.get().pairId || 'A'
+    const recipient = myPair === 'B' ? (Store.get().partnerNameA || '对方') : (Store.get().partnerNameB || '对方')
     App.showSheet(`<div class="sheet-header"><span class="sheet-close" onclick="App.closeSheet()">✕</span><span class="sheet-title">送给${recipient}</span></div>
       <div class="detail-card" style="background:${t.color};padding:24px 16px;margin-bottom:16px;"><span style="font-size:48px;display:block;margin-bottom:8px;">${t.emoji}</span><span style="display:block;font-size:18px;font-weight:700;margin-bottom:4px;">${t.title}</span><span style="display:block;font-size:13px;opacity:0.8;">${t.desc}</span></div>
       <textarea class="input textarea" id="msgInput" placeholder="想说点什么？（可不写）" maxlength="80"></textarea>
