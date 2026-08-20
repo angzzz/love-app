@@ -171,6 +171,9 @@ body {
 .wish-title { display: block; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
 .wish-desc { display: block; font-size: 14px; opacity: 0.85; margin-bottom: 10px; }
 .wish-card-bottom { display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-light); }
+.wish-card.consumed { opacity: 0.5; filter: grayscale(0.3); }
+.wish-card.consumed .wish-status.received { background: rgba(120,200,140,0.25); color: #3a9d5d; }
+.section-divider { font-size: 13px; color: var(--color-text-light); margin: 18px 4px 6px; padding-top: 10px; border-top: 1px dashed var(--color-border); }
 
 /* 发送栏 */
 .send-bar {

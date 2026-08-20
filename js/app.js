@@ -184,10 +184,10 @@ Pages.home = {
       const w = wishes[0]
       wishHtml = `<div class="section float-in">
         <div class="section-header"><span class="section-title">最新心愿卡</span><span class="section-more" onclick="App.route('wishes')">全部 ${wishes.length} ›</span></div>
-        <div class="wish-card" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
-          <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.received ? 'received' : ''}">${w.received ? '已收到' : '待领取'}</span></div>
+        <div class="wish-card ${w.received ? 'consumed' : ''}" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
+          <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.received ? 'received' : ''}">${w.received ? '已兑现' : '待领取'}</span></div>
           <span class="wish-title">${w.title}</span><span class="wish-desc">${w.desc}</span>
-          <div class="wish-card-bottom"><span>${formatDateTime(w.createdAt)}</span><span>来自 ${w.from}</span></div>
+          <div class="wish-card-bottom"><span>${formatDateTime(w.createdAt)}</span><span>来自 ${w.owner ? (w.owner === (d.pairId||'') ? '我送的' : '对方送的') : (w.from || '')}</span></div>
         </div>
       </div>`
     }
@@ -467,7 +467,10 @@ Pages.home = {
 Pages.wishes = {
   render() {
     const d = Store.get()
+    const myPair = d.pairId || ''
     const wishes = (d.wishes || []).sort((a,b) => b.createdAt - a.createdAt)
+    const pending = wishes.filter(w => !w.received)
+    const done = wishes.filter(w => w.received)
     let html = `<div class="container">
       <div class="header float-in"><div class="title-row"><span class="page-title">心愿池</span><span class="title-emoji">💌</span></div>
       <span class="page-subtitle">给对方一张小卡片，不用回复，收到就好</span></div>`
@@ -475,16 +478,24 @@ Pages.wishes = {
     if (wishes.length === 0) {
       html += `<div class="empty"><span class="empty-emoji">🌸</span><span class="empty-text">心愿池还是空的\n送出第一张卡片吧</span></div>`
     } else {
-      wishes.forEach(w => {
-        html += `<div class="wish-card float-in" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
-          <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.received ? 'received' : ''}">${w.received ? '已收到' : '待领取'}</span></div>
-          <span class="wish-title">${w.title}</span><span class="wish-desc">${w.desc}</span>
-          <div class="wish-card-bottom"><span>${formatDateTime(w.createdAt)}</span><span>来自 ${w.from}</span></div>
-        </div>`
-      })
+      pending.forEach(w => { html += this._wishCardHtml(w, myPair, false) })
+      if (done.length) {
+        html += `<div class="section-divider">已兑现 ${done.length} 张</div>`
+        done.forEach(w => { html += this._wishCardHtml(w, myPair, true) })
+      }
     }
     html += `<div class="send-bar"><button class="btn-primary" onclick="Pages.wishes.openPicker()">✨ 送一张心愿卡</button></div></div>`
     document.getElementById('app').innerHTML = html
+  },
+
+  _wishCardHtml(w, myPair, consumed) {
+    const isMine = w.owner ? (w.owner === myPair) : (w.from === '我')
+    const fromLabel = isMine ? '我送的' : '对方送的'
+    return `<div class="wish-card float-in ${consumed ? 'wish-consumed' : ''}" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
+      <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.received ? 'received' : ''}">${w.received ? '已兑现' : '待领取'}</span></div>
+      <span class="wish-title">${w.title}</span><span class="wish-desc">${w.desc}</span>
+      <div class="wish-card-bottom"><span>${formatDateTime(w.createdAt)}</span><span>来自 ${fromLabel}</span></div>
+    </div>`
   },
 
   openPicker() {
@@ -499,38 +510,26 @@ Pages.wishes = {
     const d = Store.get()
     const all = [...cardTypes, ...(d.customCards || []).map(c => ({...c, isCustom: true}))]
     this._chosen = all[i]
-    this._from = 'me'
     this.openEditor()
   },
 
   openEditor() {
     const t = this._chosen
-    const recipient = this._from === 'me' ? (Store.get().partnerNameB || '你') : (Store.get().partnerNameA || '我')
+    const recipient = Store.get().partnerNameB || '对方'
     App.showSheet(`<div class="sheet-header"><span class="sheet-close" onclick="App.closeSheet()">✕</span><span class="sheet-title">送给${recipient}</span></div>
       <div class="detail-card" style="background:${t.color};padding:24px 16px;margin-bottom:16px;"><span style="font-size:48px;display:block;margin-bottom:8px;">${t.emoji}</span><span style="display:block;font-size:18px;font-weight:700;margin-bottom:4px;">${t.title}</span><span style="display:block;font-size:13px;opacity:0.8;">${t.desc}</span></div>
       <textarea class="input textarea" id="msgInput" placeholder="想说点什么？（可不写）" maxlength="80"></textarea>
-      <div style="display:flex;align-items:center;margin-bottom:16px;"><span style="font-size:14px;color:var(--color-text-light);margin-right:12px;">来自：</span><div style="display:flex;gap:8px;"><span id="fromMe" style="padding:6px 16px;border-radius:16px;background:var(--color-primary);color:#fff;font-size:13px;cursor:pointer;" onclick="Pages.wishes.switchFrom('me')">我</span><span id="fromYou" style="padding:6px 16px;border-radius:16px;background:var(--color-bg);color:var(--color-text-light);font-size:13px;cursor:pointer;" onclick="Pages.wishes.switchFrom('you')">对方</span></div></div>
       <button class="btn-primary" onclick="Pages.wishes.send()">送出 💌</button>`)
-  },
-
-  switchFrom(who) {
-    this._from = who
-    const d = Store.get()
-    const recipient = who === 'me' ? (d.partnerNameB || '你') : (d.partnerNameA || '我')
-    document.getElementById('fromMe').style.background = who === 'me' ? 'var(--color-primary)' : 'var(--color-bg)'
-    document.getElementById('fromMe').style.color = who === 'me' ? '#fff' : 'var(--color-text-light)'
-    document.getElementById('fromYou').style.background = who === 'you' ? 'var(--color-primary)' : 'var(--color-bg)'
-    document.getElementById('fromYou').style.color = who === 'you' ? '#fff' : 'var(--color-text-light)'
-    document.querySelector('.sheet-title').textContent = '送给' + recipient
   },
 
   send() {
     const msg = document.getElementById('msgInput').value
     const t = this._chosen
+    const myPair = Store.get().pairId || ''
     const wish = {
       id: 'w_' + Date.now(), type: t.key, emoji: t.emoji, title: t.title, desc: t.desc,
       color: t.color, isCustom: !!t.isCustom, message: msg,
-      from: this._from === 'me' ? '我' : '对方', received: false, createdAt: Date.now()
+      owner: myPair, received: false, createdAt: Date.now(), updatedAt: Date.now()
     }
     Store.update(d => ({ ...d, wishes: [...(d.wishes||[]), wish] }))
     App.closeSheet()
@@ -572,7 +571,7 @@ Pages.wishes = {
     if (!this._customTitle.trim()) { App.toast('给卡片起个名字吧'); return }
     const card = { key: 'custom_' + Date.now(), emoji: this._customEmoji, title: this._customTitle.trim(), desc: this._customDesc.trim() || '一张专属你们的卡片', color: this._customColor, isCustom: true }
     Store.update(d => ({ ...d, customCards: [...(d.customCards||[]), card] }))
-    this._chosen = card; this._from = 'me'; this.openEditor()
+    this._chosen = card; this.openEditor()
   },
 
   _detailId: null,
@@ -586,19 +585,24 @@ Pages.wishes = {
   renderDetail() {
     const w = Store.get().wishes.find(x => x.id === this._detailId)
     if (!w) { App.route('wishes'); return }
+    const myPair = Store.get().pairId || ''
+    const isMine = w.owner ? (w.owner === myPair) : (w.from === '我')
+    const canReceive = !w.received && !isMine
+    const canDelete = isMine
+    const fromLabel = isMine ? '我送的' : '对方送的'
     let html = `<div class="container"><div class="detail-card float-in" style="background:${w.color};"><span class="detail-emoji">${w.emoji}</span><span class="detail-title">${w.title}</span><span class="detail-desc">${w.desc}</span>`
     if (w.message) html += `<div class="detail-message"><span class="msg-text">${w.message}</span></div>`
-    html += `<div class="detail-meta">来自 ${w.from} · ${formatDateTime(w.createdAt)}</div></div>`
-    if (!w.received && w.from === '对方') html += `<div style="text-align:center;padding:16px;"><button class="btn-primary" onclick="Pages.wishes.receive()">收到 ❤️</button></div>`
-    else if (w.received) html += `<div class="received-badge"><span class="badge-check">✓</span><br><span style="color:var(--color-primary);">已收到</span></div>`
-    if (w.from === '我') html += `<span class="delete-link" onclick="Pages.wishes.delete()">删除这张卡</span>`
+    html += `<div class="detail-meta">来自 ${fromLabel} · ${formatDateTime(w.createdAt)}</div></div>`
+    if (canReceive) html += `<div style="text-align:center;padding:16px;"><button class="btn-primary" onclick="Pages.wishes.receive()">收到 ❤️</button></div>`
+    else if (w.received) html += `<div class="received-badge"><span class="badge-check">✓</span><br><span style="color:var(--color-primary);">已兑现</span></div>`
+    if (canDelete) html += `<span class="delete-link" onclick="Pages.wishes.delete()">删除这张卡</span>`
     html += `<div style="text-align:center;margin-top:16px;"><button class="btn-ghost" onclick="App.route('wishes')">返回心愿池</button></div></div>`
     document.getElementById('app').innerHTML = html
   },
 
   receive() {
-    Store.update(d => ({ ...d, wishes: d.wishes.map(w => w.id === this._detailId ? { ...w, received: true } : w) }))
-    App.toast('已收到 ❤️')
+    Store.update(d => ({ ...d, wishes: d.wishes.map(w => w.id === this._detailId ? { ...w, received: true, updatedAt: Date.now() } : w) }))
+    App.toast('心愿已兑现 ❤️')
     this.renderDetail()
   },
 
@@ -820,27 +824,33 @@ Pages.moments = {
 
   addPhoto() {
     const input = document.createElement('input')
-    input.type = 'file'; input.accept = 'image/*'
+    input.type = 'file'; input.accept = 'image/*'; input.multiple = true
+    input.onclick = () => { if (this._photos.length >= 9) App.toast('最多 9 张') }
     input.onchange = (e) => {
-      const file = e.target.files[0]
-      if (!file) return
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const maxW = 800
-          const scale = Math.min(1, maxW / img.width)
-          canvas.width = img.width * scale
-          canvas.height = img.height * scale
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.75)
-          this._photos.push(dataUrl)
-          this.renderEditor()
+      const room = 9 - this._photos.length
+      const files = Array.from(e.target.files || []).slice(0, room)
+      if (!files.length) return
+      files.forEach(file => {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          const img = new Image()
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const maxW = 800
+            const scale = Math.min(1, maxW / img.width)
+            canvas.width = img.width * scale
+            canvas.height = img.height * scale
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+            if (this._photos.length < 9) {
+              this._photos.push(dataUrl)
+              this.renderEditor()
+            }
+          }
+          img.src = ev.target.result
         }
-        img.src = ev.target.result
-      }
-      reader.readAsDataURL(file)
+        reader.readAsDataURL(file)
+      })
     }
     input.click()
   },
@@ -852,7 +862,8 @@ Pages.moments = {
     const m = moods[this._moodIndex]
     const moment = {
       id: 'm_' + Date.now(), title: this._title.trim(), place: this._place.trim(),
-      date: this._date, mood: m.emoji, moodLabel: m.label, photos: [...this._photos], createdAt: Date.now()
+      date: this._date, mood: m.emoji, moodLabel: m.label, photos: [...this._photos],
+      owner: Store.get().pairId || '', createdAt: Date.now(), updatedAt: Date.now()
     }
     Store.update(d => ({ ...d, moments: [...(d.moments||[]), moment] }))
     App.closeSheet(); App.toast('已记录 ✨'); Pages[App.currentTab].render()
@@ -869,7 +880,8 @@ Pages.moments = {
     if (m.place) html += `<div style="font-size:14px;">📍 ${m.place}</div>`
     html += `</div>`
     if ((m.photos||[]).length > 0) { html += `<div>`; m.photos.forEach(ph => { html += `<img class="gallery-photo" src="${ph}" onclick="Pages.moments.preview('${ph}', [${m.photos.map(p=>`'${p}'`).join(',')}])">` }); html += `</div>` }
-    html += `<span class="delete-link" onclick="Pages.moments.delete()">删除这条记录</span>`
+    const canDelMoment = !m.owner || m.owner === (Store.get().pairId || '')
+    if (canDelMoment) html += `<span class="delete-link" onclick="Pages.moments.delete()">删除这条记录</span>`
     html += `<div style="text-align:center;margin-top:16px;"><button class="btn-ghost" onclick="App.route('moments')">返回瞬间</button></div></div>`
     document.getElementById('app').innerHTML = html
   },

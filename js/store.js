@@ -290,11 +290,21 @@ function mergeData(local, remote) {
     if (Array.isArray(lv) && Array.isArray(rv)) {
       // 数组合并：按 id 去重
       const map = {}
+      // 取"最新更新时间"：优先 updatedAt，回退 createdAt（状态变更会 bump updatedAt，方便跨端同步）
+      const ts = x => (x && (x.updatedAt || x.createdAt)) || 0
       ;[...lv, ...rv].forEach(item => {
         if (item && item.id) {
           const existing = map[item.id]
-          if (!existing || (item.createdAt || 0) > (existing.createdAt || 0)) {
+          const itemPhotos = (item.photos || []).length
+          const exPhotos = existing ? (existing.photos || []).length : 0
+          // 同 id：谁更新（updatedAt/createdAt）取谁；时间相同则照片更多优先（补照片）
+          if (!existing
+              || ts(item) > ts(existing)
+              || (ts(item) === ts(existing) && itemPhotos > exPhotos)) {
             map[item.id] = item
+          } else if (existing && item.photos !== undefined && itemPhotos > exPhotos) {
+            // 照片更多但时间不新：补齐照片，其余字段保留现有
+            map[item.id] = { ...existing, photos: item.photos }
           } else if (existing && item.done !== undefined) {
             // todo/food 的 done 状态取 true 优先
             map[item.id] = item.done ? item : existing
