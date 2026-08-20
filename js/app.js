@@ -184,8 +184,8 @@ Pages.home = {
       const w = wishes[0]
       wishHtml = `<div class="section float-in">
         <div class="section-header"><span class="section-title">最新心愿卡</span><span class="section-more" onclick="App.route('wishes')">全部 ${wishes.length} ›</span></div>
-        <div class="wish-card ${w.received ? 'consumed' : ''}" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
-          <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.received ? 'received' : ''}">${w.received ? '已兑现' : '待领取'}</span></div>
+        <div class="wish-card ${w.redeemed ? 'consumed' : ''}" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
+          <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.redeemed ? 'received' : w.received ? 'received-half' : ''}">${w.redeemed ? '已兑现' : w.received ? '已收到' : '待领取'}</span></div>
           <span class="wish-title">${w.title}</span><span class="wish-desc">${w.desc}</span>
           <div class="wish-card-bottom"><span>${formatDateTime(w.createdAt)}</span><span>来自 ${w.owner ? (w.owner === (d.pairId||'') ? '我送的' : '对方送的') : (w.from || '')}</span></div>
         </div>
@@ -470,7 +470,8 @@ Pages.wishes = {
     const myPair = d.pairId || ''
     const wishes = (d.wishes || []).sort((a,b) => b.createdAt - a.createdAt)
     const pending = wishes.filter(w => !w.received)
-    const done = wishes.filter(w => w.received)
+    const received = wishes.filter(w => w.received && !w.redeemed)
+    const done = wishes.filter(w => w.redeemed)
     let html = `<div class="container">
       <div class="header float-in"><div class="title-row"><span class="page-title">心愿池</span><span class="title-emoji">💌</span></div>
       <span class="page-subtitle">给对方一张小卡片，不用回复，收到就好</span></div>`
@@ -478,21 +479,27 @@ Pages.wishes = {
     if (wishes.length === 0) {
       html += `<div class="empty"><span class="empty-emoji">🌸</span><span class="empty-text">心愿池还是空的\n送出第一张卡片吧</span></div>`
     } else {
-      pending.forEach(w => { html += this._wishCardHtml(w, myPair, false) })
+      pending.forEach(w => { html += this._wishCardHtml(w, myPair, 'pending') })
+      if (received.length) {
+        html += `<div class="section-divider">已收到 ${received.length} 张 · 待兑现</div>`
+        received.forEach(w => { html += this._wishCardHtml(w, myPair, 'received') })
+      }
       if (done.length) {
         html += `<div class="section-divider">已兑现 ${done.length} 张</div>`
-        done.forEach(w => { html += this._wishCardHtml(w, myPair, true) })
+        done.forEach(w => { html += this._wishCardHtml(w, myPair, 'done') })
       }
     }
     html += `<div class="send-bar"><button class="btn-primary" onclick="Pages.wishes.openPicker()">✨ 送一张心愿卡</button></div></div>`
     document.getElementById('app').innerHTML = html
   },
 
-  _wishCardHtml(w, myPair, consumed) {
+  _wishCardHtml(w, myPair, state) {
     const isMine = w.owner ? (w.owner === myPair) : (w.from === '我')
     const fromLabel = isMine ? '我送的' : '对方送的'
-    return `<div class="wish-card float-in ${consumed ? 'wish-consumed' : ''}" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
-      <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${w.received ? 'received' : ''}">${w.received ? '已兑现' : '待领取'}</span></div>
+    const statusText = state === 'done' ? '已兑现' : state === 'received' ? '已收到' : '待领取'
+    const statusClass = state === 'done' ? 'received' : state === 'received' ? 'received-half' : ''
+    return `<div class="wish-card float-in ${state === 'done' ? 'wish-consumed' : ''}" style="background:${w.color};" onclick="Pages.wishes.openDetail('${w.id}')">
+      <div class="wish-card-top"><span class="wish-emoji">${w.emoji}</span><span class="wish-status ${statusClass}">${statusText}</span></div>
       <span class="wish-title">${w.title}</span><span class="wish-desc">${w.desc}</span>
       <div class="wish-card-bottom"><span>${formatDateTime(w.createdAt)}</span><span>来自 ${fromLabel}</span></div>
     </div>`
@@ -588,13 +595,19 @@ Pages.wishes = {
     const myPair = Store.get().pairId || ''
     const isMine = w.owner ? (w.owner === myPair) : (w.from === '我')
     const canReceive = !w.received && !isMine
+    const canRedeem = w.received && !w.redeemed
     const canDelete = isMine
     const fromLabel = isMine ? '我送的' : '对方送的'
     let html = `<div class="container"><div class="detail-card float-in" style="background:${w.color};"><span class="detail-emoji">${w.emoji}</span><span class="detail-title">${w.title}</span><span class="detail-desc">${w.desc}</span>`
     if (w.message) html += `<div class="detail-message"><span class="msg-text">${w.message}</span></div>`
     html += `<div class="detail-meta">来自 ${fromLabel} · ${formatDateTime(w.createdAt)}</div></div>`
     if (canReceive) html += `<div style="text-align:center;padding:16px;"><button class="btn-primary" onclick="Pages.wishes.receive()">收到 ❤️</button></div>`
-    else if (w.received) html += `<div class="received-badge"><span class="badge-check">✓</span><br><span style="color:var(--color-primary);">已兑现</span></div>`
+    else if (canRedeem) {
+      html += `<div class="received-badge"><span class="badge-check">✓</span><br><span style="color:var(--color-primary);">已收到</span></div>`
+      html += `<div style="text-align:center;padding:8px 16px 0;"><button class="btn-primary" onclick="Pages.wishes.redeem()">✨ 兑现这张卡</button></div>`
+    } else if (w.redeemed) {
+      html += `<div class="received-badge"><span class="badge-check">✓</span><br><span style="color:var(--color-primary);">已兑现</span></div>`
+    }
     if (canDelete) html += `<span class="delete-link" onclick="Pages.wishes.delete()">删除这张卡</span>`
     html += `<div style="text-align:center;margin-top:16px;"><button class="btn-ghost" onclick="App.route('wishes')">返回心愿池</button></div></div>`
     document.getElementById('app').innerHTML = html
@@ -602,7 +615,14 @@ Pages.wishes = {
 
   receive() {
     Store.update(d => ({ ...d, wishes: d.wishes.map(w => w.id === this._detailId ? { ...w, received: true, updatedAt: Date.now() } : w) }))
-    App.toast('心愿已兑现 ❤️')
+    App.toast('已收到 ❤️')
+    this.renderDetail()
+  },
+
+  // 兑现：把"已收到"的卡片标记为已兑现（心愿被用掉）。双方都能点
+  redeem() {
+    Store.update(d => ({ ...d, wishes: d.wishes.map(w => w.id === this._detailId ? { ...w, received: true, redeemed: true, updatedAt: Date.now() } : w) }))
+    App.toast('心愿已兑现 ✨')
     this.renderDetail()
   },
 

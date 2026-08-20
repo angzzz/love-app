@@ -86,6 +86,14 @@ function migrateData(old) {
       migrated[key] = def[key]
     }
   })
+  // 心愿卡新增 redeemed（已兑现）字段的兼容：
+  // 旧卡片只有 received，统一视为"已兑现"，避免它们退回"已收到"让用户重复操作
+  if (Array.isArray(migrated.wishes)) {
+    migrated.wishes = migrated.wishes.map(w => {
+      if (w && w.received === true && w.redeemed === undefined) return { ...w, redeemed: true }
+      return w
+    })
+  }
   migrated.schemaVersion = SCHEMA_VERSION
   return migrated
 }
